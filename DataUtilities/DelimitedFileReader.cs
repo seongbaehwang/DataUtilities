@@ -10,6 +10,8 @@ namespace DataUtilities
     {
         private readonly TextReader _streamReader;
 
+        private readonly bool _hasHeaderRow;
+
         private readonly char _delimiter;
         private readonly string _delimiterString;
         private readonly string[] _delimiterStringArray;
@@ -27,18 +29,32 @@ namespace DataUtilities
 
         #region constructors
 
-        public DelimitedFileReader(string sourceFilePath, DelimitedFileReaderOption option) : this(new StreamReader(sourceFilePath), option)
+        /// <summary>
+        /// Initialize an instance of <see cref="DelimitedFileReader"/>
+        /// </summary>
+        /// <param name="sourceFilePath"></param>
+        /// <param name="option">If not provided, default value of <see cref="DelimitedFileReaderOption"/>, i.e., CSV file with header row and without text qualifier</param>
+        public DelimitedFileReader(string sourceFilePath, DelimitedFileReaderOption option = null) : this(new StreamReader(sourceFilePath), option)
         {
         }
 
-        public DelimitedFileReader(TextReader textReader, DelimitedFileReaderOption option)
+        /// <summary>
+        /// Initialize an instance of <see cref="DelimitedFileReader"/>
+        /// </summary>
+        /// <param name="textReader"></param>
+        /// <param name="option">If not provided, default value of <see cref="DelimitedFileReaderOption"/>, i.e., CSV file with header row and without text qualifier</param>
+        public DelimitedFileReader(TextReader textReader, DelimitedFileReaderOption option = null)
         {
             _streamReader = textReader;
+
+            option = option ?? new DelimitedFileReaderOption();
 
             if (string.IsNullOrEmpty(option.Delimiter))
             {
                 throw new ArgumentException("Delimiter is required.");
             }
+
+            _hasHeaderRow = option.HasHeaderRow;
 
             // If both delimiter and qualifier are of type char, use SplitWithCharQualifer, twice faster
             if (option.Delimiter.Length == 1 && !string.IsNullOrEmpty(option.Qualifier) && option.Qualifier.Length == 1)
@@ -68,7 +84,6 @@ namespace DataUtilities
             }
 
             Depth = 1;
-            RecordsAffected = -1;
 
             ParseHeaderRow(option.HasHeaderRow);
         }
@@ -79,8 +94,10 @@ namespace DataUtilities
         {
             var line = _streamReader.ReadLine();
 
-            if (string.IsNullOrWhiteSpace(line))
+            if (hasHeaderRow && string.IsNullOrWhiteSpace(line))
                 throw new ArgumentException("The source file is empty");
+
+            if(line == null) return;
 
             var columnNames = _splitMethod(line);
 
@@ -104,6 +121,8 @@ namespace DataUtilities
             _fieldNameIdDictionary = _fieldIdNameDictionary
                 .ToDictionary(kv => kv.Value, kv => kv.Key,
                     StringComparer.OrdinalIgnoreCase);
+
+            FieldCount = _fieldIdNameDictionary.Count;
         }
 
         private string[] SplitWithNoQualifer(string line)
@@ -331,7 +350,7 @@ namespace DataUtilities
             return string.IsNullOrEmpty(_currentData[i]);
         }
 
-        public int FieldCount => _fieldIdNameDictionary.Count;
+        public int FieldCount { get; private set; }
 
         object IDataRecord.this[int i] => GetValue(i);
 
@@ -363,6 +382,14 @@ namespace DataUtilities
 
             _currentData = _splitMethod(_nextLine);
 
+            if (FieldCount != _currentData.Length)
+            {
+                var lineNumber = RecordsAffected + (_hasHeaderRow ? 2 : 1);
+                throw new ApplicationException($"Malformed data found. (Line: {lineNumber}, Data: {_nextLine})");
+            }
+
+            RecordsAffected++;
+
             _nextLine = _streamReader.ReadLine();
             return true;
         }
@@ -371,7 +398,10 @@ namespace DataUtilities
 
         public bool IsClosed { get; private set; }
 
-        public int RecordsAffected { get; }
+        /// <summary>
+        /// Number of lines read
+        /// </summary>
+        public int RecordsAffected { get; private set; }
 
     }
 }
