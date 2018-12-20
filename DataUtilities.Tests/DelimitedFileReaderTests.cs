@@ -93,7 +93,7 @@ namespace DataUtilities.Tests
             };
 
             var sr = new StringReader(string.Join(Environment.NewLine, data));
-            var parser = new StringParser
+            var parser = new BooleanDateTimeParser
             {
                 BooleanParser = s=> s?.Trim().ToLower() == "y",
                 DateTimeParser = s => DateTime.ParseExact(s, "MMddyyyy", null)

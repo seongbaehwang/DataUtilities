@@ -69,7 +69,10 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Fakes\ColumnNameAttributeTestObject.cs" />
+    <Compile Include="DataReaderConvertTests.cs" />
     <Compile Include="DelimitedFileReaderTests.cs" />
+    <Compile Include="Fakes\TestObject.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

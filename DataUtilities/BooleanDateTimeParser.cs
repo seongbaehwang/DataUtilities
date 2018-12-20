@@ -2,7 +2,7 @@ using System;
 
 namespace DataUtilities
 {
-    public class StringParser
+    public class BooleanDateTimeParser: IBooleanDateTimeParser
     {
         /// <summary>
         /// Default is <see cref="bool.Parse"/>

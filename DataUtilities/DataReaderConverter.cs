@@ -4,68 +4,72 @@ using System.ComponentModel;
 using System.Data;
 using System.Linq;
 using System.Reflection;
-using System.Text.RegularExpressions;
 
 namespace DataUtilities
 {
-    public static class DataParser
+    public class DataReaderConverter : IDataReaderConverter
     {
+        public DataReaderConverter(IBooleanDateTimeParser parser)
+        {
+            _parser = parser;
+        }
+
         /// <summary>
-        /// Populate list of an instance of <see cref="T"/> from <see cref="reader"/>
+        /// Populate list of an instance of <see cref="TOutput"/> from <see cref="reader"/>
         /// </summary>
-        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="TOutput"></typeparam>
         /// <param name="reader"></param>
         /// <returns></returns>
-        public static IEnumerable<T> ConvertToObjectList<T>(IDataReader reader) where T : class, new()
+        public virtual IEnumerable<TOutput> ConvertToObjectList<TOutput>(IDataReader reader) where TOutput : class, new()
         {
             var colIndexes = new Dictionary<string, int>();
             for (var i = 0; i < reader.FieldCount; i++) colIndexes.Add(reader.GetName(i), i);
 
-            var propColIndexMapping = GetColumnIndexPropertyMapping<T>(colIndexes);
+            var columnIndexPropertyMapping = GetColumnIndexPropertyMapping<TOutput>(colIndexes);
 
             while (reader.Read())
             {
                 var values = new object[reader.FieldCount];
                 reader.GetValues(values);
 
-                var obj = ConvertRowToObject<T>(values, propColIndexMapping);
+                var obj = ConvertToObject<TOutput>(values, columnIndexPropertyMapping);
 
                 yield return obj;
             }
         }
 
         /// <summary>
-        /// Convert a row into an object of type T
+        /// Convert instance of <see cref="IList{T}"/> into an object of type <see cref="TOutput"/>
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="row"></param>
+        /// <typeparam name="TOutput"></typeparam>
+        /// <param name="data"></param>
         /// <param name="columnIndexPropertyMapping"></param>
         /// <returns></returns>
-        public static T ConvertRowToObject<T>(IList<object> row, Dictionary<int, PropertyInfo> columnIndexPropertyMapping)
-            where T : class, new()
+        public virtual TOutput ConvertToObject<TOutput>(IList<object> data, Dictionary<int, PropertyInfo> columnIndexPropertyMapping)
+            where TOutput : class, new()
         {
-            var obj = new T();
+            var obj = new TOutput();
 
             foreach (var cm in columnIndexPropertyMapping)
             {
-                SetPropertyValue(obj, cm.Value, row[cm.Key]);
+                SetPropertyValue(obj, cm.Value, data[cm.Key]);
             }
 
             return obj;
         }
 
         /// <summary>
-        /// Get column index and property of <see cref="T"/> mapping.
+        /// Get column index and property of <see cref="TOutput"/> mapping.
         /// By default, property name is to be used for column name. Or column name can be set with <see cref="ColumnNameAttribute"/>
         /// </summary>
-        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="TOutput"></typeparam>
         /// <param name="columnNameIndex"></param>
         /// <returns>
         /// A dictionary whose key is column index and value is property info
         /// </returns>
-        public static Dictionary<int, PropertyInfo> GetColumnIndexPropertyMapping<T>(IEnumerable<KeyValuePair<string, int>> columnNameIndex)
+        public virtual Dictionary<int, PropertyInfo> GetColumnIndexPropertyMapping<TOutput>(IEnumerable<KeyValuePair<string, int>> columnNameIndex)
         {
-            var type = typeof(T);
+            var type = typeof(TOutput);
 
             var properties = type.GetProperties();
 
@@ -94,7 +98,7 @@ namespace DataUtilities
         /// <param name="instance"></param>
         /// <param name="pi"></param>
         /// <param name="value"></param>
-        public static void SetPropertyValue(object instance, PropertyInfo pi, object value)
+        public virtual void SetPropertyValue(object instance, PropertyInfo pi, object value)
         {
             if (value == null || DBNull.Value.Equals(value))
             {
@@ -130,15 +134,13 @@ namespace DataUtilities
 
             if (propertyType == typeof(DateTime) || propertyType == typeof(DateTime?))
             {
-                var dt = DateTime.Parse(value.ToString());
-                DateTime.SpecifyKind(dt, DateTimeKind.Utc);
-                pi.SetValue(instance, dt);
+                pi.SetValue(instance, _parser.DateTimeParser(value.ToString()));
                 return;
             }
 
             if (propertyType == typeof(bool) && valueType != typeof(bool))
             {
-                pi.SetValue(instance, value.ToString().ToBoolean());
+                pi.SetValue(instance, _parser.BooleanParser(value.ToString()));
                 return;
             }
 
@@ -148,28 +150,7 @@ namespace DataUtilities
             pi.SetValue(instance, parsedValue);
         }
 
-        /// <summary>
-        /// Convert a string value into an instance of boolean. value is case-insensitive.
-        /// true for 1, y, yes, true,
-        /// false for others
-        /// </summary>
-        /// <param name="value"></param>
-        /// <returns>
-        /// true for 1, y, yes, true,
-        /// false for others
-        /// </returns>
-        public static bool ToBoolean(this string value)
-        {
-            return !string.IsNullOrWhiteSpace(value) && _booleanMatcher.IsMatch(value);
-        }
-
-        private static readonly Regex _booleanMatcher;
-
-        static DataParser()
-        {
-            _booleanMatcher = new Regex("^(true|y|yes|1)$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
-        }
-
+        private readonly IBooleanDateTimeParser _parser;
     }
 
 }

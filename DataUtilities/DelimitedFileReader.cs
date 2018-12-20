@@ -8,6 +8,8 @@ namespace DataUtilities
 {
     public class DelimitedFileReader : IDataReader
     {
+        #region Fields
+
         private readonly TextReader _streamReader;
 
         private readonly bool _hasHeaderRow;
@@ -26,7 +28,9 @@ namespace DataUtilities
         private string _nextLine;
 
         private readonly Func<string, string[]> _splitMethod;
-        private readonly StringParser _parser;
+        private readonly BooleanDateTimeParser _parser;
+
+        #endregion
 
         #region constructors
 
@@ -36,7 +40,7 @@ namespace DataUtilities
         /// <param name="sourceFilePath"></param>
         /// <param name="option">If not provided, default value of <see cref="DelimitedFileReaderOption"/>, i.e., CSV file with header row and without text qualifier</param>
         /// <param name="parser"></param>
-        public DelimitedFileReader(string sourceFilePath, DelimitedFileReaderOption option = null, StringParser parser = null) : this(new StreamReader(sourceFilePath), option, parser)
+        public DelimitedFileReader(string sourceFilePath, DelimitedFileReaderOption option = null, BooleanDateTimeParser parser = null) : this(new StreamReader(sourceFilePath), option, parser)
         {
         }
 
@@ -46,10 +50,10 @@ namespace DataUtilities
         /// <param name="textReader"></param>
         /// <param name="option">If not provided, default value of <see cref="DelimitedFileReaderOption"/>, i.e., CSV file with header row and without text qualifier</param>
         /// <param name="parser"></param>
-        public DelimitedFileReader(TextReader textReader, DelimitedFileReaderOption option = null, StringParser parser = null)
+        public DelimitedFileReader(TextReader textReader, DelimitedFileReaderOption option = null, BooleanDateTimeParser parser = null)
         {
             _streamReader = textReader;
-            _parser = parser ?? new StringParser();
+            _parser = parser ?? new BooleanDateTimeParser();
 
             option = option ?? new DelimitedFileReaderOption();
 
