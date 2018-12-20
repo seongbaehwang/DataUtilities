@@ -112,11 +112,20 @@ namespace DataUtilities
             }
 
             if (propertyType.IsGenericType
-                && propertyType.GetGenericTypeDefinition() == typeof(Nullable<>)
-                && Nullable.GetUnderlyingType(propertyType) == valueType)
+                && propertyType.GetGenericTypeDefinition() == typeof(Nullable<>))
             {
-                pi.SetValue(instance, value);
-                return;
+                if (Nullable.GetUnderlyingType(propertyType) == valueType)
+                {
+                    pi.SetValue(instance, value);
+                    return;
+                }
+
+                // when input is empty string
+                if (valueType == typeof(string) && value.ToString().Trim() == "")
+                {
+                    pi.SetValue(instance, null);
+                    return;
+                }
             }
 
             if (propertyType == typeof(DateTime) || propertyType == typeof(DateTime?))

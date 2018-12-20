@@ -26,6 +26,7 @@ namespace DataUtilities
         private string _nextLine;
 
         private readonly Func<string, string[]> _splitMethod;
+        private readonly StringParser _parser;
 
         #region constructors
 
@@ -34,7 +35,8 @@ namespace DataUtilities
         /// </summary>
         /// <param name="sourceFilePath"></param>
         /// <param name="option">If not provided, default value of <see cref="DelimitedFileReaderOption"/>, i.e., CSV file with header row and without text qualifier</param>
-        public DelimitedFileReader(string sourceFilePath, DelimitedFileReaderOption option = null) : this(new StreamReader(sourceFilePath), option)
+        /// <param name="parser"></param>
+        public DelimitedFileReader(string sourceFilePath, DelimitedFileReaderOption option = null, StringParser parser = null) : this(new StreamReader(sourceFilePath), option, parser)
         {
         }
 
@@ -43,9 +45,11 @@ namespace DataUtilities
         /// </summary>
         /// <param name="textReader"></param>
         /// <param name="option">If not provided, default value of <see cref="DelimitedFileReaderOption"/>, i.e., CSV file with header row and without text qualifier</param>
-        public DelimitedFileReader(TextReader textReader, DelimitedFileReaderOption option = null)
+        /// <param name="parser"></param>
+        public DelimitedFileReader(TextReader textReader, DelimitedFileReaderOption option = null, StringParser parser = null)
         {
             _streamReader = textReader;
+            _parser = parser ?? new StringParser();
 
             option = option ?? new DelimitedFileReaderOption();
 
@@ -212,22 +216,28 @@ namespace DataUtilities
             IsClosed = true;
         }
 
-        public string GetName(int i)
+        /// <summary>
+        /// Get column name of the column of index <param name="i"></param>.
+        /// If there is no header row, column names are to be "Column" + index, e.g. Column0, Colum1 etc.
+        /// </summary>
+        /// <param name="i"></param>
+        /// <returns></returns>
+        public virtual string GetName(int i)
         {
             return _fieldIdNameDictionary[i];
         }
 
         /// <summary>
-        /// Always System.String
+        /// Always System.String, i.e., full name of <see cref="string"/>
         /// </summary>
         /// <param name="i"></param>
         /// <returns></returns>
-        public string GetDataTypeName(int i)
+        public virtual string GetDataTypeName(int i)
         {
             return typeof(string).FullName;
         }
 
-        public Type GetFieldType(int i)
+        public virtual Type GetFieldType(int i)
         {
             return typeof(string);
         }
@@ -237,7 +247,7 @@ namespace DataUtilities
             return _currentData[i];
         }
 
-        public string GetValue(int i)
+        public virtual string GetValue(int i)
         {
             return _currentData[i];
         }
@@ -251,7 +261,7 @@ namespace DataUtilities
             return noOfInstance;
         }
 
-        public string[] GetValues()
+        public virtual string[] GetValues()
         {
             var values = new string[FieldCount];
 
@@ -265,79 +275,79 @@ namespace DataUtilities
             return _fieldNameIdDictionary[name];
         }
 
-        public bool GetBoolean(int i)
+        public virtual bool GetBoolean(int i)
         {
-            return bool.Parse(_currentData[i]);
+            return _parser.BooleanParser(_currentData[i]);
         }
 
-        public byte GetByte(int i)
+        public virtual byte GetByte(int i)
         {
-            throw new NotImplementedException();
+            return byte.Parse(_currentData[i]);
         }
 
-        public long GetBytes(int i, long fieldOffset, byte[] buffer, int bufferoffset, int length)
-        {
-            throw new NotImplementedException();
-        }
-
-        public char GetChar(int i)
+        public virtual long GetBytes(int i, long fieldOffset, byte[] buffer, int bufferoffset, int length)
         {
             throw new NotImplementedException();
         }
 
-        public long GetChars(int i, long fieldoffset, char[] buffer, int bufferoffset, int length)
+        public virtual char GetChar(int i)
         {
             throw new NotImplementedException();
         }
 
-        public Guid GetGuid(int i)
+        public virtual long GetChars(int i, long fieldoffset, char[] buffer, int bufferoffset, int length)
+        {
+            throw new NotImplementedException();
+        }
+
+        public virtual Guid GetGuid(int i)
         {
             return Guid.Parse(_currentData[i]);
         }
 
-        public short GetInt16(int i)
+        public virtual short GetInt16(int i)
         {
             return short.Parse(_currentData[i]);
         }
 
-        public int GetInt32(int i)
+        public virtual int GetInt32(int i)
         {
             return int.Parse(_currentData[i]);
         }
 
-        public long GetInt64(int i)
+        public virtual long GetInt64(int i)
         {
             return long.Parse(_currentData[i]);
         }
 
-        public float GetFloat(int i)
+        public virtual float GetFloat(int i)
         {
             return float.Parse(_currentData[i]);
         }
 
-        public double GetDouble(int i)
+        public virtual double GetDouble(int i)
         {
             return double.Parse(_currentData[i]);
         }
 
-        public string GetString(int i)
+        public virtual string GetString(int i)
         {
             return _currentData[i];
         }
 
-        public decimal GetDecimal(int i)
+        public virtual decimal GetDecimal(int i)
         {
             return decimal.Parse(_currentData[i]);
         }
 
-        public DateTime GetDateTime(int i)
+        public virtual DateTime GetDateTime(int i)
         {
-            return DateTime.Parse(_currentData[i]);
+            return _parser.DateTimeParser(_currentData[i]);
         }
 
-        public IDataReader GetData(int i)
+        public virtual IDataReader GetData(int i)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         /// <summary>
@@ -345,34 +355,34 @@ namespace DataUtilities
         /// </summary>
         /// <param name="i"></param>
         /// <returns></returns>
-        public bool IsDBNull(int i)
+        public virtual bool IsDBNull(int i)
         {
             return string.IsNullOrEmpty(_currentData[i]);
         }
 
-        public int FieldCount { get; private set; }
+        public virtual int FieldCount { get; private set; }
 
         object IDataRecord.this[int i] => GetValue(i);
 
         object IDataRecord.this[string name] => GetValue(GetOrdinal(name));
 
-        public void Close()
+        public virtual void Close()
         {
             _streamReader.Close();
             IsClosed = true;
         }
 
-        public DataTable GetSchemaTable()
+        public virtual DataTable GetSchemaTable()
         {
             throw new NotImplementedException();
         }
 
-        public bool NextResult()
+        public virtual bool NextResult()
         {
-            throw new NotImplementedException();
+            return false;
         }
 
-        public bool Read()
+        public virtual bool Read()
         {
             if (_nextLine == null)
             {
@@ -394,14 +404,14 @@ namespace DataUtilities
             return true;
         }
 
-        public int Depth { get; }
+        public virtual int Depth { get; }
 
-        public bool IsClosed { get; private set; }
+        public virtual bool IsClosed { get; private set; }
 
         /// <summary>
         /// Number of lines read
         /// </summary>
-        public int RecordsAffected { get; private set; }
+        public virtual int RecordsAffected { get; private set; }
 
     }
 }
