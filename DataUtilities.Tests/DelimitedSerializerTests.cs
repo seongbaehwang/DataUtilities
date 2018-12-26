@@ -48,14 +48,14 @@ namespace DataUtilities.Tests
                 StringValue = "Hello World"
             };
 
-            var option = new DelimitedSerializerOption
+            var option = new DelimitedStringOption
             {
                 DateTimeFormatter = d=> d.ToString("yyyy-MM-dd")
             };
 
             var s = sut.GetDelimitedString(obj, option);
 
-            Assert.Equal("-100,Hello World,1972-12-25,true", s);
+            Assert.Equal("-100,Hello World,1972-12-25,True", s);
         }
     }
 }

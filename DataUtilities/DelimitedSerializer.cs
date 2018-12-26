@@ -1,114 +1,29 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Reflection;
 
 namespace DataUtilities
 {
-    public class DelimitedSerializerOption
-    {
-        /// <summary>
-        /// The string to be used to separate columns.
-        /// </summary>
-        public string ColumnDelimiter { get; set; } = ",";
-
-        /// <summary>
-        /// The string to be used to separate rows.
-        /// </summary>
-        public string RowDelimiter { get; set; } = Environment.NewLine;
-        
-        public string TextQualifier { get; set; }
-
-        public Func<bool, string> BooleanFormatter { get; set; } = b => b.ToString();
-
-        public Func<DateTime, string> DateTimeFormatter { get; set; } = d => d.ToString(CultureInfo.InvariantCulture);
-    }
-
-    /// Represents a serializer that will serialize arbitrary objects to files with specific row and column separators.
     public class DelimitedSerializer
     {
         /// <summary>
-        /// Serializes an object to a delimited file. Throws an exception if any of the property names, column names, or values contain either the <see cref="ColumnDelimiter"/> or the <see cref="RowDelimiter"/>.
+        /// 
         /// </summary>
-        /// <typeparam name="T">The type of the object to serialize.</typeparam>
-        /// <param name="items">A list of the items to serialize.</param>
-        /// <returns>The serialized string.</returns>
-        public string Serialize<T>(List<T> items)
+        /// <typeparam name="T"></typeparam>
+        /// <param name="items"></param>
+        /// <param name="option"></param>
+        /// <returns></returns>
+        public string Serialize<T>(IEnumerable<T> items, DelimitedSerializerOption option) where T : class
         {
-            return "";
+            var rows = new List<string>();
 
-            //if (string.IsNullOrEmpty(ColumnDelimiter))
-            //{
-            //    throw new ArgumentException($"The property '{nameof(ColumnDelimiter)}' cannot be null or an empty string.");
-            //}
+            if (option.IncludeHeaderRow)
+            {
+                rows.Add(HeaderRow<T>(option.ColumnDelimiter, option.TextQualifier, option.QualifyOnlyRequired));
+            }
 
-            //if (string.IsNullOrEmpty(RowDelimiter))
-            //{
-            //    throw new ArgumentException($"The property '{nameof(RowDelimiter)}' cannot be null or an empty string.");
-            //}
-
-            //var result = new ExtendedStringBuilder();
-
-            //var properties = typeof(T).GetProperties()
-            //    .Where(x => Attribute.IsDefined(x, typeof(DelimitedColumnAttribute)))
-            //    .OrderBy(x => ((DelimitedColumnAttribute)x.GetCustomAttributes(typeof(DelimitedColumnAttribute), true)[0]).Order)
-            //    .ThenBy(x => ((DelimitedColumnAttribute)x.GetCustomAttributes(typeof(DelimitedColumnAttribute), true)[0]).Name)
-            //    .ThenBy(x => x.Name);
-
-            //foreach (var property in properties)
-            //{
-            //    var attribute = (DelimitedColumnAttribute)property.GetCustomAttributes(typeof(DelimitedColumnAttribute), true)[0];
-
-            //    var name = attribute.Name ?? property.Name;
-
-            //    if (name.Contains(ColumnDelimiter))
-            //    {
-            //        throw new ArgumentException($"The column name string '{name}' contains an invalid character: '{ColumnDelimiter}'.");
-            //    }
-            //    if (name.Contains(RowDelimiter))
-            //    {
-            //        throw new ArgumentException($"The column name string '{name}' contains an invalid character: '{RowDelimiter}'.");
-            //    }
-
-            //    if (result.Length > 0)
-            //    {
-            //        result += ColumnDelimiter;
-            //    }
-
-            //    result += name;
-            //}
-
-            //foreach (var item in items)
-            //{
-            //    var row = new ExtendedStringBuilder();
-
-            //    foreach (var property in properties)
-            //    {
-            //        var value = property.GetValue(item).ToString();
-
-            //        if (value.Contains(ColumnDelimiter))
-            //        {
-            //            throw new ArgumentException($"The property value string '{value}' contains an invalid character: '{ColumnDelimiter}'.");
-            //        }
-            //        if (value.Contains(RowDelimiter))
-            //        {
-            //            throw new ArgumentException($"The property value string '{value}' contains an invalid character: '{RowDelimiter}'.");
-            //        }
-
-            //        if (row.Length > 0)
-            //        {
-            //            row += ColumnDelimiter;
-            //        }
-
-            //        row += value;
-            //    }
-
-            //    result += RowDelimiter;
-            //    result += row;
-            //}
-
-            //return result;
+            return string.Join(option.RowDelimiter, rows.Concat(GetDelimitedString(items, option)));
         }
 
         /// <summary>
@@ -116,100 +31,125 @@ namespace DataUtilities
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="delimiter"></param>
+        /// <param name="textQualifier"></param>
+        /// <param name="qualifyOnlyRequired"></param>
         /// <returns></returns>
-        public string HeaderRow<T>(string delimiter = ",") where T: class 
+        public string HeaderRow<T>(string delimiter = ",", string textQualifier = null, bool qualifyOnlyRequired = false) where T : class
         {
-            return string.Join(delimiter, GetPropertyColumNameMapping<T>().Select(pc => pc.ColumnName));
-        }
+            IEnumerable<string> columnNames;
 
-        public IEnumerable<string> GetDelimitedString<T>(IEnumerable<T> items, DelimitedSerializerOption option = null) where T: class
-        {
-            option = option ?? new DelimitedSerializerOption();
-
-            var props = GetPropertyColumNameMapping<T>().Select(m => m.Property).ToArray();
-
-            foreach (var item in items)
+            if (string.IsNullOrEmpty(textQualifier))
             {
-                yield return GetDelimitedString(item, props, option); ;
+                columnNames = GetPropertyColumNameMapping<T>().Select(pc => pc.ColumnName);
             }
-        }
+            else if(qualifyOnlyRequired)
+            {
+                columnNames = GetPropertyColumNameMapping<T>().Select(pc => QualifyStringIfRequired(pc.ColumnName, textQualifier, delimiter));
+            }
+            else
+            {
+                columnNames = GetPropertyColumNameMapping<T>().Select(pc => GetQualifiedString(pc.ColumnName, textQualifier));
+            }
 
-        public string GetDelimitedString<T>(T obj, DelimitedSerializerOption option) where T: class
-        {
-            var mapping = GetPropertyColumNameMapping<T>();
-
-            return GetDelimitedString(obj, mapping.Select(m => m.Property).ToArray(), option);
+            return string.Join(delimiter, columnNames);
         }
 
         /// <summary>
-        /// 
+        /// Get concatenated string of string value of all public properties of <typeparam name="T"></typeparam>.
+        /// or decorated with <see cref="DelimitedColumnAttribute"/>
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="obj"></param>
-        /// <param name="properties"></param>
         /// <param name="option"></param>
         /// <returns></returns>
-        private string GetDelimitedString<T>(T obj, PropertyInfo[] properties, DelimitedSerializerOption option) where T: class
+        public string GetDelimitedString<T>(T obj, DelimitedStringOption option = null) where T : class
         {
-            var values = new object[properties.Length];
-
-            for (var i = 0; i < properties.Length; i++)
-            {
-                var pi = properties[i];
-                var propertyType = pi.PropertyType;
-                var value = pi.GetValue(obj);
-
-                if (value == null || DBNull.Value.Equals(value))
-                {
-                    values[i] = value;
-                    continue;
-                }
-
-                if (propertyType == typeof(bool) ||
-                    propertyType.IsGenericType
-                    && propertyType.GetGenericTypeDefinition() == typeof(Nullable<>)
-                    && Nullable.GetUnderlyingType(propertyType) == typeof(bool))
-                {
-                    values[i] = option.BooleanFormatter((bool) value);
-                    continue;
-                }
-
-                if (propertyType == typeof(DateTime) ||
-                    propertyType.IsGenericType
-                     && propertyType.GetGenericTypeDefinition() == typeof(Nullable<>)
-                     && Nullable.GetUnderlyingType(propertyType) == typeof(DateTime))
-                {
-                    values[i] = option.DateTimeFormatter((DateTime)value);
-                    continue;
-                }
-
-                values[i] = value;
-            }
-
-            return string.Join(option.ColumnDelimiter, values);
+            return GetDelimitedString<T>(new[] {obj}, option).First();
         }
 
-        private string GetStringValue(object obj, PropertyInfo pi, Func<bool, string> booleanFormatter, Func<DateTime, string> dateTimeFormatter)
+        public IEnumerable<string> GetDelimitedString<T>(IEnumerable<T> items, DelimitedStringOption option = null) where T : class
         {
-            var value = pi.GetValue(obj);
+            option = option ?? new DelimitedStringOption();
 
-            if (value == null || DBNull.Value.Equals(value))
+            var props = GetPropertyColumNameMapping<T>().Select(m => m.Property).ToArray();
+
+            var getStringValueMethod = GetStringValueMethod(option);
+
+            foreach (var item in items)
+            {
+                yield return GetDelimitedString(item, props, option.ColumnDelimiter, getStringValueMethod);
+            }
+        }
+
+        private string GetDelimitedString<T>(T obj, IReadOnlyList<PropertyInfo> properties, string columnDelimiter, Func<object, Type, string> getStringValueMethod) where T : class
+        {
+            var values = new string[properties.Count];
+
+            for (var i = 0; i < properties.Count; i++)
+            {
+                var pi = properties[i];
+
+                values[i] = getStringValueMethod(obj == null ? null : pi.GetValue(obj), pi.PropertyType);
+            }
+
+            return string.Join(columnDelimiter, values);
+        }
+
+        private Func<object, Type, string> GetStringValueMethod(DelimitedStringOption option)
+        {
+            if (string.IsNullOrEmpty(option.TextQualifier))
+            {
+                return (obj, type) => GetStringValue(obj, type, option.BooleanFormatter, option.DateTimeFormatter);
+            }
+
+            if (option.QualifyOnlyRequired)
+            {
+                return (obj, type) =>
+                {
+                    var value = GetStringValue(obj, type, option.BooleanFormatter, option.DateTimeFormatter);
+
+                    return QualifyStringIfRequired(value, option.TextQualifier, option.ColumnDelimiter);
+                };
+            }
+
+            return (obj, type) => GetQualifiedString(GetStringValue(obj, type, option.BooleanFormatter, option.DateTimeFormatter),
+                option.TextQualifier);
+        }
+
+        private string QualifyStringIfRequired(string value, string textQualifier, string delimiter)
+        {
+            return value.IndexOf(delimiter, StringComparison.Ordinal) < 0 ? value : GetQualifiedString(value, textQualifier);
+        }
+
+        private string GetQualifiedString(string value, string textQualifier)
+        {
+            if (value.IndexOf(textQualifier, StringComparison.Ordinal) >= 0)
+            {
+                value = value.Replace(textQualifier, textQualifier + textQualifier);
+            }
+
+            return $"{textQualifier}{value}{textQualifier}";
+        }
+
+        private string GetStringValue(object value, Type valueType, Func<bool, string> booleanFormatter, Func<DateTime, string> dateTimeFormatter)
+        {
+            if (value == null)
             {
                 return string.Empty;
             }
 
-            if (pi.PropertyType == typeof(bool) ||
-                pi.PropertyType.IsGenericType
-                && pi.PropertyType.GetGenericTypeDefinition() == typeof(Nullable<>)
-                && Nullable.GetUnderlyingType(pi.PropertyType) == typeof(bool))
+            if (valueType == typeof(bool) ||
+                valueType.IsGenericType
+                && valueType.GetGenericTypeDefinition() == typeof(Nullable<>)
+                && Nullable.GetUnderlyingType(valueType) == typeof(bool))
             {
                 return booleanFormatter((bool)value);
             }
 
-            if (pi.PropertyType == typeof(DateTime) ||
-                pi.PropertyType.IsGenericType
-                && pi.PropertyType.GetGenericTypeDefinition() == typeof(Nullable<>)
-                && Nullable.GetUnderlyingType(pi.PropertyType) == typeof(DateTime))
+            if (valueType == typeof(DateTime) ||
+                valueType.IsGenericType
+                && valueType.GetGenericTypeDefinition() == typeof(Nullable<>)
+                && Nullable.GetUnderlyingType(valueType) == typeof(DateTime))
             {
                 return dateTimeFormatter((DateTime)value);
             }
@@ -217,6 +157,12 @@ namespace DataUtilities
             return value.ToString();
         }
 
+        /// <summary>
+        /// Get property and column name mapping in the order as they should be serialized
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns>
+        /// </returns>
         private (PropertyInfo Property, string ColumnName)[] GetPropertyColumNameMapping<T>()
         {
             var type = typeof(T);
@@ -235,6 +181,8 @@ namespace DataUtilities
                     .Select(ap => (ap.Property, ap.PropertyIndex, ap.Attr.Name ?? ap.Property.Name, ap.Attr.Order))
                     .ToArray();
 
+            // no property decorated with DelimitedColumnAttribute.
+            // same order as properties declared on their class
             if (propertyColumnMapping.Length == 0)
             {
                 return properties
@@ -242,6 +190,9 @@ namespace DataUtilities
                     .ToArray();
             }
 
+            // TODO: Duplicate column name, duplicate order, Validate???
+
+            // not all decorated properties has Order set, use property index
             if (propertyColumnMapping.Any(cp => cp.Order <= 0))
             {
                 return propertyColumnMapping
@@ -250,10 +201,11 @@ namespace DataUtilities
                     .ToArray();
             }
 
+            // all decorated properties has Order set
             return propertyColumnMapping
                 .OrderBy(pc => pc.Order)
                 .Select(pc => (pc.Property, pc.ColumnName))
                 .ToArray();
         }
     }
-}
+ }
