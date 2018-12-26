@@ -60,7 +60,7 @@ namespace DataUtilities
 
         /// <summary>
         /// Get column index and property of <see cref="TOutput"/> mapping.
-        /// By default, property name is to be used for column name. Or column name can be set with <see cref="ColumnNameAttribute"/>
+        /// By default, property name is to be used for column name. Or column name can be set with <see cref="DelimitedColumnAttribute"/>
         /// </summary>
         /// <typeparam name="TOutput"></typeparam>
         /// <param name="columnNameIndex"></param>
@@ -75,9 +75,9 @@ namespace DataUtilities
 
             // if there is any property with ColumnNameAttribute, populate properties with ColumnNameAttribute
             var colNameProp = properties
-                .Select(pi => (Attr: pi.GetCustomAttribute(typeof(ColumnNameAttribute)) as ColumnNameAttribute, Property: pi))
+                .Select(pi => (Attr: pi.GetCustomAttribute(typeof(DelimitedColumnAttribute)) as DelimitedColumnAttribute, Property: pi))
                 .Where(ap => ap.Attr != null)
-                .Select(ap => (ColumnName: ap.Attr.Name, Property: ap.Property))
+                .Select(ap => (ColumnName: ap.Attr.Name ?? ap.Property.Name, Property: ap.Property))
                 .ToArray();
 
             if (colNameProp.Length == 0)

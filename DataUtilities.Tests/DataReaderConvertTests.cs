@@ -70,12 +70,12 @@ namespace DataUtilities.Tests
             var sut = new DataReaderConverter(_booleanDateTimeParserFixture.BooleanDateTimeParser);
             var columnNameIndex = new Dictionary<string, int>
             {
-                {"String", 0},
+                {"StringValue", 0},
                 {"DateTime", 1},
                 {"Int", 2}
             };
 
-            var mapping = sut.GetColumnIndexPropertyMapping<ColumnNameAttributeTestObject>(columnNameIndex);
+            var mapping = sut.GetColumnIndexPropertyMapping<DelimitedColumnAttributeTestObject>(columnNameIndex);
 
             // Only properties decorated with ColumnNameAttribute are mapped.
             Assert.Equal(2, mapping.Count);
