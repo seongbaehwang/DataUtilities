@@ -8,8 +8,8 @@ namespace DataUtilities.Tests
 
         public string StringValue { get; set; }
 
-        public DateTime DateTimeValue { get; set; }
+        public DateTime? DateTimeValue { get; set; }
 
-        public bool BooleanValue { get; set; }
+        public bool? BooleanValue { get; set; }
     }
 }

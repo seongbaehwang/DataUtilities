@@ -1,57 +1,62 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
 namespace DataUtilities
 {
-    public class DelimitedSerializer
+    public class DelimitedSerializer : IDelimitedSerializer
     {
+        private static readonly ConcurrentDictionary<Type, IEnumerable<(PropertyInfo Property, string ColumnName)>>
+            _propertyColumnNameMappingCache =
+                new ConcurrentDictionary<Type, IEnumerable<(PropertyInfo Property, string ColumnName)>>();
+
+        private readonly IDelimitedSerializerOption _option;
+
+        protected IBooleanDateTimeFormatter BooleanDateTimeFormatter => _option.BooleanDateTimeFormatter;
+
+        #region Constructors
+
         /// <summary>
-        /// 
+        /// Initialize <see cref="DelimitedSerializer"/> with default option
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="items"></param>
-        /// <param name="option"></param>
-        /// <returns></returns>
-        public string Serialize<T>(IEnumerable<T> items, DelimitedSerializerOption option) where T : class
+        public DelimitedSerializer() : this(new DelimitedSerializerOption())
         {
-            var rows = new List<string>();
 
-            if (option.IncludeHeaderRow)
-            {
-                rows.Add(HeaderRow<T>(option.ColumnDelimiter, option.TextQualifier, option.QualifyOnlyRequired));
-            }
-
-            return string.Join(option.RowDelimiter, rows.Concat(GetDelimitedString(items, option)));
         }
 
         /// <summary>
-        /// 
+        /// Initialize <see cref="DelimitedSerializer"/> with the option <paramref name="option"/>
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="delimiter"></param>
-        /// <param name="textQualifier"></param>
-        /// <param name="qualifyOnlyRequired"></param>
-        /// <returns></returns>
-        public string HeaderRow<T>(string delimiter = ",", string textQualifier = null, bool qualifyOnlyRequired = false) where T : class
+        /// <param name="option"></param>
+        public DelimitedSerializer(IDelimitedSerializerOption option)
         {
-            IEnumerable<string> columnNames;
+            Validate(option);
 
-            if (string.IsNullOrEmpty(textQualifier))
-            {
-                columnNames = GetPropertyColumNameMapping<T>().Select(pc => pc.ColumnName);
-            }
-            else if(qualifyOnlyRequired)
-            {
-                columnNames = GetPropertyColumNameMapping<T>().Select(pc => QualifyStringIfRequired(pc.ColumnName, textQualifier, delimiter));
-            }
-            else
-            {
-                columnNames = GetPropertyColumNameMapping<T>().Select(pc => GetQualifiedString(pc.ColumnName, textQualifier));
-            }
+            _option = option;
+        }
 
-            return string.Join(delimiter, columnNames);
+        private void Validate(IDelimitedSerializerOption option)
+        {
+            if(option == null)
+                throw new ArgumentNullException(nameof(option));
+
+            if (string.IsNullOrEmpty(option.Delimiter))
+            {
+                throw new ArgumentException($"{nameof(IDelimitedSerializerOption.Delimiter)} is required");
+            }
+        }
+
+        #endregion
+
+        public string HeaderRow<T>() where T : class
+        {
+            var columnNames = string.IsNullOrEmpty(_option.TextQualifier)
+                ? GetPropertyColumNameMapping<T>().Select(pc => pc.ColumnName)
+                : GetPropertyColumNameMapping<T>().Select(pc => GetQualifiedString(pc.ColumnName));
+
+            return string.Join(_option.Delimiter, columnNames);
         }
 
         /// <summary>
@@ -60,28 +65,30 @@ namespace DataUtilities
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="obj"></param>
-        /// <param name="option"></param>
         /// <returns></returns>
-        public string GetDelimitedString<T>(T obj, DelimitedStringOption option = null) where T : class
+        public string GetDelimitedString<T>(T obj) where T : class
         {
-            return GetDelimitedString<T>(new[] {obj}, option).First();
+            return GetDelimitedString<T>(new[] { obj }).First();
         }
 
-        public IEnumerable<string> GetDelimitedString<T>(IEnumerable<T> items, DelimitedStringOption option = null) where T : class
+        public IEnumerable<string> GetDelimitedString<T>(IEnumerable<T> items, bool includeHeaderRow = false) where T : class
         {
-            option = option ?? new DelimitedStringOption();
-
             var props = GetPropertyColumNameMapping<T>().Select(m => m.Property).ToArray();
 
-            var getStringValueMethod = GetStringValueMethod(option);
+            var getStringValueMethod = GetStringValueMethod();
+
+            if (includeHeaderRow)
+            {
+                yield return HeaderRow<T>();
+            }
 
             foreach (var item in items)
             {
-                yield return GetDelimitedString(item, props, option.ColumnDelimiter, getStringValueMethod);
+                yield return GetDelimitedString(item, props, getStringValueMethod);
             }
         }
 
-        private string GetDelimitedString<T>(T obj, IReadOnlyList<PropertyInfo> properties, string columnDelimiter, Func<object, Type, string> getStringValueMethod) where T : class
+        private string GetDelimitedString<T>(T obj, IReadOnlyList<PropertyInfo> properties, Func<object, Type, string> getStringValueMethod) where T : class
         {
             var values = new string[properties.Count];
 
@@ -92,66 +99,66 @@ namespace DataUtilities
                 values[i] = getStringValueMethod(obj == null ? null : pi.GetValue(obj), pi.PropertyType);
             }
 
-            return string.Join(columnDelimiter, values);
+            return string.Join(_option.Delimiter, values);
         }
 
-        private Func<object, Type, string> GetStringValueMethod(DelimitedStringOption option)
+        private Func<object, Type, string> GetStringValueMethod()
         {
-            if (string.IsNullOrEmpty(option.TextQualifier))
+            if (string.IsNullOrEmpty(_option.TextQualifier))
             {
-                return (obj, type) => GetStringValue(obj, type, option.BooleanFormatter, option.DateTimeFormatter);
+                return GetStringValue;
             }
 
-            if (option.QualifyOnlyRequired)
+            if (_option.QualifyOnlyRequired)
             {
-                return (obj, type) =>
-                {
-                    var value = GetStringValue(obj, type, option.BooleanFormatter, option.DateTimeFormatter);
-
-                    return QualifyStringIfRequired(value, option.TextQualifier, option.ColumnDelimiter);
-                };
+                return (obj, type) => QualifyStringIfRequired(GetStringValue(obj, type));
             }
 
-            return (obj, type) => GetQualifiedString(GetStringValue(obj, type, option.BooleanFormatter, option.DateTimeFormatter),
-                option.TextQualifier);
+            return (obj, type) => QualifyString(GetStringValue(obj, type));
         }
 
-        private string QualifyStringIfRequired(string value, string textQualifier, string delimiter)
+        private string GetQualifiedString(string value)
         {
-            return value.IndexOf(delimiter, StringComparison.Ordinal) < 0 ? value : GetQualifiedString(value, textQualifier);
+            return _option.QualifyOnlyRequired ? QualifyStringIfRequired(value) : QualifyString(value);
         }
 
-        private string GetQualifiedString(string value, string textQualifier)
+        private string QualifyStringIfRequired(string value)
         {
-            if (value.IndexOf(textQualifier, StringComparison.Ordinal) >= 0)
+            return value.IndexOf(_option.Delimiter, StringComparison.Ordinal) < 0 ? value : QualifyString(value);
+        }
+
+        private string QualifyString(string value)
+        {
+            if (value.IndexOf(_option.TextQualifier, StringComparison.Ordinal) >= 0)
             {
-                value = value.Replace(textQualifier, textQualifier + textQualifier);
+                value = value.Replace(_option.TextQualifier, _option.TextQualifier + _option.TextQualifier);
             }
 
-            return $"{textQualifier}{value}{textQualifier}";
+            return $"{_option.TextQualifier}{value}{_option.TextQualifier}";
         }
 
-        private string GetStringValue(object value, Type valueType, Func<bool, string> booleanFormatter, Func<DateTime, string> dateTimeFormatter)
+        protected virtual string GetStringValue(object value, Type valueType)
         {
             if (value == null)
             {
                 return string.Empty;
             }
 
-            if (valueType == typeof(bool) ||
-                valueType.IsGenericType
-                && valueType.GetGenericTypeDefinition() == typeof(Nullable<>)
-                && Nullable.GetUnderlyingType(valueType) == typeof(bool))
+            if (BooleanDateTimeFormatter == null)
             {
-                return booleanFormatter((bool)value);
+                return value.ToString();
             }
 
-            if (valueType == typeof(DateTime) ||
-                valueType.IsGenericType
-                && valueType.GetGenericTypeDefinition() == typeof(Nullable<>)
-                && Nullable.GetUnderlyingType(valueType) == typeof(DateTime))
+            if (BooleanDateTimeFormatter.BooleanFormatter != null &&
+                (valueType == typeof(bool) || Nullable.GetUnderlyingType(valueType) == typeof(bool)))
             {
-                return dateTimeFormatter((DateTime)value);
+                return BooleanDateTimeFormatter.BooleanFormatter((bool)value);
+            }
+
+            if (BooleanDateTimeFormatter.DateTimeFormatter != null &&
+                (valueType == typeof(DateTime) || Nullable.GetUnderlyingType(valueType) == typeof(DateTime)))
+            {
+                return BooleanDateTimeFormatter.DateTimeFormatter((DateTime)value);
             }
 
             return value.ToString();
@@ -163,49 +170,53 @@ namespace DataUtilities
         /// <typeparam name="T"></typeparam>
         /// <returns>
         /// </returns>
-        private (PropertyInfo Property, string ColumnName)[] GetPropertyColumNameMapping<T>()
+        private IEnumerable<(PropertyInfo Property, string ColumnName)> GetPropertyColumNameMapping<T>()
         {
-            var type = typeof(T);
+            var key = typeof(T);
 
-            var properties = type.GetProperties();
-
-            // if there is any property with DelimitedColumnAttribute, serialize properties with DelimitedColumnAttribute
-            (PropertyInfo Property, int PropertyIndex, string ColumnName, int Order)[] propertyColumnMapping =
-                properties
-                    .Select(
-                        (pi, idx) => (Attr:
-                            pi.GetCustomAttribute(typeof(DelimitedColumnAttribute)) as DelimitedColumnAttribute,
-                            Property:
-                            pi, PropertyIndex: idx))
-                    .Where(ap => ap.Attr != null)
-                    .Select(ap => (ap.Property, ap.PropertyIndex, ap.Attr.Name ?? ap.Property.Name, ap.Attr.Order))
-                    .ToArray();
-
-            // no property decorated with DelimitedColumnAttribute.
-            // same order as properties declared on their class
-            if (propertyColumnMapping.Length == 0)
+            return _propertyColumnNameMappingCache.GetOrAdd(key, type
+                =>
             {
-                return properties
-                    .Select(pi => (pi, pi.Name))
-                    .ToArray();
-            }
+                var properties = type.GetProperties();
 
-            // TODO: Duplicate column name, duplicate order, Validate???
+                // if there is any property with DelimitedColumnAttribute, serialize properties with DelimitedColumnAttribute
+                (PropertyInfo Property, int PropertyIndex, string ColumnName, int Order)[] propertyColumnMapping =
+                    properties
+                        .Select(
+                            (pi, idx) => (Attr:
+                                pi.GetCustomAttribute(typeof(DelimitedColumnAttribute)) as DelimitedColumnAttribute,
+                                Property:
+                                pi, PropertyIndex: idx))
+                        .Where(ap => ap.Attr != null)
+                        .Select(ap => (ap.Property, ap.PropertyIndex, ap.Attr.Name ?? ap.Property.Name, ap.Attr.Order))
+                        .ToArray();
 
-            // not all decorated properties has Order set, use property index
-            if (propertyColumnMapping.Any(cp => cp.Order <= 0))
-            {
+                // no property decorated with DelimitedColumnAttribute.
+                // same order as properties declared on their class
+                if (propertyColumnMapping.Length == 0)
+                {
+                    return properties
+                        .Select(pi => (pi, pi.Name))
+                        .ToArray();
+                }
+
+                // TODO: Duplicate column name, duplicate order, Validate???
+
+                // not all decorated properties has Order set, use property index
+                if (propertyColumnMapping.Any(cp => cp.Order <= 0))
+                {
+                    return propertyColumnMapping
+                        .OrderBy(pc => pc.PropertyIndex)
+                        .Select(pc => (pc.Property, pc.ColumnName))
+                        .ToArray();
+                }
+
+                // all decorated properties has Order set
                 return propertyColumnMapping
-                    .OrderBy(pc => pc.PropertyIndex)
+                    .OrderBy(pc => pc.Order)
                     .Select(pc => (pc.Property, pc.ColumnName))
                     .ToArray();
-            }
-
-            // all decorated properties has Order set
-            return propertyColumnMapping
-                .OrderBy(pc => pc.Order)
-                .Select(pc => (pc.Property, pc.ColumnName))
-                .ToArray();
+            });
         }
     }
- }
+}

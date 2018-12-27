@@ -1,17 +1,19 @@
-using System;
-
 namespace DataUtilities
 {
-    public class DelimitedSerializerOption : DelimitedStringOption
+    public class DelimitedSerializerOption : IDelimitedSerializerOption
     {
         /// <summary>
-        /// Whether to include header row or not. Default is true
+        /// The string to be used to separate columns.
         /// </summary>
-        public virtual bool IncludeHeaderRow { get; set; } = true;
+        public virtual string Delimiter { get; set; } = ",";
+
+        public virtual string TextQualifier { get; set; }
 
         /// <summary>
-        /// The string to be used to separate rows.
+        /// Whether to qualify text only when text contains <see cref="Delimiter"/>
         /// </summary>
-        public virtual string RowDelimiter { get; set; } = Environment.NewLine;
+        public virtual bool QualifyOnlyRequired { get; set; }
+
+        public virtual IBooleanDateTimeFormatter BooleanDateTimeFormatter { get; set; }
     }
 }
