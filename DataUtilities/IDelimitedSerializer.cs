@@ -8,7 +8,7 @@ namespace DataUtilities
 
         /// <summary>
         /// Get concatenated string of string value of all public properties of <typeparam name="T"></typeparam>.
-        /// or decorated with <see cref="DelimitedColumnAttribute"/>
+        /// or decorated with <see cref="ColumnAttribute"/>
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="obj"></param>

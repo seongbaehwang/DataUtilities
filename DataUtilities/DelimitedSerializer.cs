@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Reflection;
 
@@ -61,7 +62,7 @@ namespace DataUtilities
 
         /// <summary>
         /// Get concatenated string of string value of all public properties of <typeparam name="T"></typeparam>.
-        /// or decorated with <see cref="DelimitedColumnAttribute"/>
+        /// or decorated with <see cref="ColumnAttribute"/>
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="obj"></param>
@@ -184,7 +185,7 @@ namespace DataUtilities
                     properties
                         .Select(
                             (pi, idx) => (Attr:
-                                pi.GetCustomAttribute(typeof(DelimitedColumnAttribute)) as DelimitedColumnAttribute,
+                                pi.GetCustomAttribute(typeof(ColumnAttribute)) as ColumnAttribute,
                                 Property:
                                 pi, PropertyIndex: idx))
                         .Where(ap => ap.Attr != null)

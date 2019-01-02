@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Data;
 using System.Linq;
 using System.Reflection;
@@ -60,7 +61,7 @@ namespace DataUtilities
 
         /// <summary>
         /// Get column index and property of <see cref="TOutput"/> mapping.
-        /// By default, property name is to be used for column name. Or column name can be set with <see cref="DelimitedColumnAttribute"/>
+        /// By default, property name is to be used for column name. Or column name can be set with <see cref="ColumnAttribute"/>
         /// </summary>
         /// <typeparam name="TOutput"></typeparam>
         /// <param name="columnNameIndex"></param>
@@ -75,7 +76,7 @@ namespace DataUtilities
 
             // if there is any property with ColumnNameAttribute, populate properties with ColumnNameAttribute
             var colNameProp = properties
-                .Select(pi => (Attr: pi.GetCustomAttribute(typeof(DelimitedColumnAttribute)) as DelimitedColumnAttribute, Property: pi))
+                .Select(pi => (Attr: pi.GetCustomAttribute(typeof(ColumnAttribute)) as ColumnAttribute, Property: pi))
                 .Where(ap => ap.Attr != null)
                 .Select(ap => (ColumnName: ap.Attr.Name ?? ap.Property.Name, Property: ap.Property))
                 .ToArray();
