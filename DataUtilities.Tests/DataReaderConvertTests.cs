@@ -7,16 +7,16 @@ using Xunit;
 
 namespace DataUtilities.Tests
 {
-    public class BooleanDateTimeParserFixture
+    public class DataReaderConvertFixture
     {
         public IBooleanDateTimeParser BooleanDateTimeParser { get; set; } = new BooleanDateTimeParser();
     }
 
-    public class DataReaderConvertTests : IClassFixture<BooleanDateTimeParserFixture>
+    public class DataReaderConvertTests : IClassFixture<DataReaderConvertFixture>
     {
-        private readonly BooleanDateTimeParserFixture _booleanDateTimeParserFixture;
+        private readonly DataReaderConvertFixture _booleanDateTimeParserFixture;
 
-        public DataReaderConvertTests(BooleanDateTimeParserFixture booleanDateTimeParserFixture)
+        public DataReaderConvertTests(DataReaderConvertFixture booleanDateTimeParserFixture)
         {
             _booleanDateTimeParserFixture = booleanDateTimeParserFixture;
         }
@@ -65,7 +65,40 @@ namespace DataUtilities.Tests
         }
 
         [Fact]
-        public void GetColumnIndexPropertyMapping_UsingColumnNameAttribute()
+        public void ConvertToObject_CustomParser()
+        {
+            var sut = new DataReaderConverter(new BooleanDateTimeParser
+            {
+                BooleanParser = s => s.Equals("Y", StringComparison.OrdinalIgnoreCase),
+                DateTimeParser = s =>
+                {
+                    var d = DateTime.ParseExact(s, "MM-dd-yyyy", null);
+                    return DateTime.SpecifyKind(d, DateTimeKind.Utc);
+                }
+            });
+
+            var type = typeof(TestObject);
+
+            var columnIndexPropertyMapping = new Dictionary<int, PropertyInfo>
+            {
+                {0, type.GetProperty(nameof(TestObject.StringValue))},
+                {1, type.GetProperty(nameof(TestObject.IntValue))},
+                {2, type.GetProperty(nameof(TestObject.DateTimeValue))},
+                {3, type.GetProperty(nameof(TestObject.BooleanValue))}
+            };
+
+            var obj = sut.ConvertToObject<TestObject>(new object[] { "Jackie Chan", 1, "12-25-1970", "y" }, columnIndexPropertyMapping);
+
+            Assert.Equal(1, obj.IntValue);
+            Assert.Equal("Jackie Chan", obj.StringValue);
+            Assert.Equal(new DateTime(1970, 12, 25), obj.DateTimeValue);
+            // ReSharper disable once PossibleInvalidOperationException
+            Assert.Equal(DateTimeKind.Utc, obj.DateTimeValue.Value.Kind);
+            Assert.True(obj.BooleanValue);
+        }
+
+        [Fact]
+        public void GetColumnIndexPropertyMapping_UsingColumnAttribute()
         {
             var sut = new DataReaderConverter(_booleanDateTimeParserFixture.BooleanDateTimeParser);
             var columnNameIndex = new Dictionary<string, int>
@@ -75,7 +108,7 @@ namespace DataUtilities.Tests
                 {"Int", 2}
             };
 
-            var mapping = sut.GetColumnIndexPropertyMapping<DelimitedColumnAttributeTestObject>(columnNameIndex);
+            var mapping = sut.GetColumnIndexPropertyMapping<TestObjectWithColumnAttribute>(columnNameIndex);
 
             // Only properties decorated with ColumnNameAttribute are mapped.
             Assert.Equal(2, mapping.Count);

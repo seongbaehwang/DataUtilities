@@ -74,7 +74,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DelimitedSerializerTests.cs" />
-    <Compile Include="Fakes\DelimitedColumnAttributeTestObject.cs" />
+    <Compile Include="Fakes\TestObjectWithColumnAttribute.cs" />
     <Compile Include="DataReaderConvertTests.cs" />
     <Compile Include="DelimitedFileReaderTests.cs" />
     <Compile Include="Fakes\TestObject.cs" />

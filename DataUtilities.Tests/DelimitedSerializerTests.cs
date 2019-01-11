@@ -40,7 +40,7 @@ namespace DataUtilities.Tests
             {
                 var sut = new DelimitedSerializer();
 
-                var headerRow = sut.HeaderRow<DelimitedColumnAttributeTestObject>();
+                var headerRow = sut.HeaderRow<TestObjectWithColumnAttribute>();
 
                 Assert.Equal("Int,StringValue", headerRow);
             }

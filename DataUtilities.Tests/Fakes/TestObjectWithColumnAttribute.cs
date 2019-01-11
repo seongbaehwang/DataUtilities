@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace DataUtilities.Tests
 {
-    public class DelimitedColumnAttributeTestObject
+    public class TestObjectWithColumnAttribute
     {
         [Column("Int")]
         public int IntValue { get; set; }

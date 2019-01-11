@@ -203,18 +203,10 @@ namespace DataUtilities
 
                 // TODO: Duplicate column name, duplicate order, Validate???
 
-                // not all decorated properties has Order set, use property index
-                if (propertyColumnMapping.Any(cp => cp.Order <= 0))
-                {
-                    return propertyColumnMapping
-                        .OrderBy(pc => pc.PropertyIndex)
-                        .Select(pc => (pc.Property, pc.ColumnName))
-                        .ToArray();
-                }
-
-                // all decorated properties has Order set
+                // sort by PropertyIndex as well to cover cases in which Order is not set or invalid, e.g., duplicate order
                 return propertyColumnMapping
                     .OrderBy(pc => pc.Order)
+                    .ThenBy(pc => pc.PropertyIndex)
                     .Select(pc => (pc.Property, pc.ColumnName))
                     .ToArray();
             });

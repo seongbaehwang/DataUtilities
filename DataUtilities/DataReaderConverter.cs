@@ -139,7 +139,7 @@ namespace DataUtilities
                 return;
             }
 
-            if (propertyType == typeof(bool) && valueType != typeof(bool))
+            if (propertyType == typeof(bool) || propertyType == typeof(bool?))
             {
                 pi.SetValue(instance, _parser.BooleanParser(value.ToString()));
                 return;
