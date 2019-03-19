@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace DataUtilities
+namespace SbhTech.DataUtilities
 {
     public class DelimitedFileReaderFactory : IDelimitedFileReaderFactory
     {

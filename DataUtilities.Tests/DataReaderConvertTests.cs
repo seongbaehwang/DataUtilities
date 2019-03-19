@@ -5,7 +5,7 @@ using System.Linq;
 using System.Reflection;
 using Xunit;
 
-namespace DataUtilities.Tests
+namespace SbhTech.DataUtilities.Tests
 {
     public class DataReaderConvertFixture
     {

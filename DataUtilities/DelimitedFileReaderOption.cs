@@ -1,6 +1,6 @@
 using System.ComponentModel;
 
-namespace DataUtilities
+namespace SbhTech.DataUtilities
 {
     public class DelimitedFileReaderOption
     {

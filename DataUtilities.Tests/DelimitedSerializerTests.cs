@@ -2,7 +2,7 @@
 using System.Linq;
 using Xunit;
 
-namespace DataUtilities.Tests
+namespace SbhTech.DataUtilities.Tests
 {
     public class DelimitedSerializerTests
     {

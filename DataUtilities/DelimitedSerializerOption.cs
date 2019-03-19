@@ -1,4 +1,4 @@
-namespace DataUtilities
+namespace SbhTech.DataUtilities
 {
     public class DelimitedSerializerOption : IDelimitedSerializerOption
     {

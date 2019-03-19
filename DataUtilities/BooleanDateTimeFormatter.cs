@@ -1,6 +1,6 @@
 using System;
 
-namespace DataUtilities
+namespace SbhTech.DataUtilities
 {
     public class BooleanDateTimeFormatter : IBooleanDateTimeFormatter
     {

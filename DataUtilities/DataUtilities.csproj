@@ -2,7 +2,11 @@
 
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;net46</TargetFrameworks>
-    <LangVersion>7.1</LangVersion>    
+    <LangVersion>7.1</LangVersion>
+    <Authors>Seong Bae Hwang</Authors>
+    <AssemblyName>SbhTech.DataUtilities</AssemblyName>
+    <RootNamespace>SbhTech.DataUtilities</RootNamespace>
+    <Company>Seong Bae Hwang Technology</Company>    
   </PropertyGroup>
 
   <ItemGroup>

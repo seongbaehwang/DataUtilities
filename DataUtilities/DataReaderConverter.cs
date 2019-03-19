@@ -6,7 +6,7 @@ using System.Data;
 using System.Linq;
 using System.Reflection;
 
-namespace DataUtilities
+namespace SbhTech.DataUtilities
 {
     public class DataReaderConverter : IDataReaderConverter
     {

@@ -4,7 +4,7 @@ using System.Data;
 using System.IO;
 using System.Linq;
 
-namespace DataUtilities
+namespace SbhTech.DataUtilities
 {
     public class DelimitedFileReader : IDataReader
     {
@@ -214,11 +214,28 @@ namespace DataUtilities
         //		_regex = new Regex(pattern, options);
         //	}
 
+        #region IDisposable Support
+
+        private bool _disposedValue;
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposedValue) return;
+
+            if (disposing)
+            {
+                Close();
+            }
+
+            _disposedValue = true;
+        }
+
         public void Dispose()
         {
-            _streamReader.Dispose();
-            IsClosed = true;
+            Dispose(true);
         }
+
+        #endregion
 
         /// <summary>
         /// Get column name of the column of index <param name="i"></param>.

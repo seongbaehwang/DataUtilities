@@ -1,7 +1,7 @@
 using System;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace DataUtilities.Tests
+namespace SbhTech.DataUtilities.Tests
 {
     public class TestObjectWithColumnAttribute
     {

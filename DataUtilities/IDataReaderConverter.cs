@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Reflection;
 
-namespace DataUtilities
+namespace SbhTech.DataUtilities
 {
     public interface IDataReaderConverter
     {

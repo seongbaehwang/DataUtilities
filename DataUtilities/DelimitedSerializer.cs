@@ -5,7 +5,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Reflection;
 
-namespace DataUtilities
+namespace SbhTech.DataUtilities
 {
     public class DelimitedSerializer : IDelimitedSerializer
     {

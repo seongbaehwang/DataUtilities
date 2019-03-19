@@ -2,7 +2,7 @@
 using System.IO;
 using Xunit;
 
-namespace DataUtilities.Tests
+namespace SbhTech.DataUtilities.Tests
 {
     public class DelimitedFileReaderTests
     {

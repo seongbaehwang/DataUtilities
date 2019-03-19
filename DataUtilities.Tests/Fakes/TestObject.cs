@@ -1,6 +1,6 @@
 using System;
 
-namespace DataUtilities.Tests
+namespace SbhTech.DataUtilities.Tests
 {
     public class TestObject
     {
